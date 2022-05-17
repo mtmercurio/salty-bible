@@ -33,8 +33,9 @@ services:
       - postgres
       - redis
     build:
-      context: .
+      context: ./backend
       target: dependencies
+    working_dir: /home/node/app/backend
     ports:
       - ${PORT}:${PORT}
       - 9229:9229
