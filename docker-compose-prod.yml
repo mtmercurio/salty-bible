@@ -52,10 +52,8 @@ services:
       - "traefik.http.routers.salty.rule=Host(`salty.yas.family`) && PathPrefix(`/api`)"
       - "traefik.http.routers.salty.entrypoints=websecure"
       - "traefik.http.routers.salty.tls.certresolver=myresolver"
-      - "traefik.http.middlewares.salty-middleware-1.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.salty-middleware-1.redirectscheme.permanent=true"
-      - "traefik.http.middlewares.salty-middleware-2.stripprefix.prefixes=/api"
-      - "traefik.http.routers.salty.middlewares=salty-middleware-1,salty-middleware-2"
+      - "traefik.http.middlewares.salty-middleware-1.stripprefix.prefixes=/api"
+      - "traefik.http.routers.salty.middlewares=salty-middleware-1"
       - "traefik.port=3333"
     networks:
       - traefik_proxy
@@ -74,6 +72,9 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
       - "--certificatesresolvers.myresolver.acme.httpChallenge=true"
       - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
       # - "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
