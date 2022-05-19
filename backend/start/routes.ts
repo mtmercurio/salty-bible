@@ -18,7 +18,9 @@
 |
 */
 
+import HealthCheck from '@ioc:Adonis/Core/HealthCheck'
 import Route from '@ioc:Adonis/Core/Route'
+import Database from '@ioc:Adonis/Lucid/Database'
 import User from 'App/Models/User'
 
 Route.get('/', async () => {
@@ -87,4 +89,12 @@ Route.post('/logout', async ({ auth }) => {
   return {
     revoked: true
   }
+})
+
+Route.get('health', async ({ response }) => {
+  const report = await HealthCheck.getReport()
+
+  return report.healthy
+    ? response.ok(report)
+    : response.badRequest(report)
 })

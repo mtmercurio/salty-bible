@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:13
+    working_dir: /home/node/app/backend
+    volumes:
+      - postgres_volume:/var/lib/postgresql/data
+      - ./dockerConfig/postgres-dev-init.sql:/docker-entrypoint-initdb.d/init.sql # will setup dev database adonis_app for us
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+    networks:
+      - traefik_proxy
+
+  redis:
+    container_name: redis
+    image: redis:6-alpine
+    volumes:
+      - redis_volume:/data
+    ports:
+      - 6379:6379
+    networks:
+      - traefik_proxy
+
+  adonis_app:
+    container_name: salty
+    restart: always
+    depends_on:
+      - postgres
+      - redis
+    build:
+      context: ./backend
+      target: dependencies
+    working_dir: /home/node/app/backend
+    ports:
+      - ${PORT}
+      - 9229:9229
+    env_file:
+      - .env
+    environment:
+      - PG_HOST=postgres
+      - REDIS_HOST=redis
+    volumes:
+      - ./:/home/node/app
+    command: dumb-init node ace serve --watch --node-args="--inspect=0.0.0.0"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salty.rule=Host(`salty.yas.family`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.salty.entrypoints=websecure"
+      - "traefik.http.routers.salty.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.salty-middleware-1.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.serviceheaders.headers.accessControlAllowCredentials=true"
+      - "traefik.http.middlewares.serviceheaders.headers.accessControlAllowOriginList=http://localhost:3000"
+      - "traefik.http.middlewares.serviceheaders.headers.accesscontrolallowmethods=GET,POST,PUT,PATCH,DELETE,OPTIONS"
+      - "traefik.http.middlewares.serviceheaders.headers.accessControlAllowHeaders=*"
+      - "traefik.http.middlewares.serviceheaders.headers.accesscontrolmaxage=100" 
+      - "traefik.http.middlewares.serviceheaders.headers.addvaryheader=true"
+      - "traefik.http.routers.salty.middlewares=salty-middleware-1,serviceheaders"
+      - "traefik.port=3333"
+    networks:
+      - traefik_proxy
+
+
+
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.6
+    networks:
+      - traefik_proxy
+    command:
+      # - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--certificatesresolvers.myresolver.acme.httpChallenge=true"
+      - "--certificatesresolvers.myresolver.acme.httpchallenge.entrypoint=web"
+      # - "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=alex@alexdykstra.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+      - "80:80"
+      - "443:443"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "./letsencrypt:/letsencrypt"
+
+volumes:
+  postgres_volume:
+  redis_volume:
+networks:
+  traefik_proxy:
+    name: traefik_proxy
+    driver: bridge
