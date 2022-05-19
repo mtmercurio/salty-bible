@@ -8,7 +8,7 @@
     "start": "node server.js",
     "lint": "eslint . --ext=.ts",
     "format": "prettier --write .",
-    "dockerAttach": "docker exec -it adonis_app /bin/sh",
+    "dockerAttach": "docker exec -it salty /bin/sh",
     "dockerAttachRedis": "docker exec -it redis /bin/sh",
     "dockerAttachPostgres": "docker exec -it postgres /bin/sh"
   },
