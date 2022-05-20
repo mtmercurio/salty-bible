@@ -21,7 +21,10 @@
 import HealthCheck from '@ioc:Adonis/Core/HealthCheck'
 import Route from '@ioc:Adonis/Core/Route'
 import Database from '@ioc:Adonis/Lucid/Database'
+import Reading from 'App/Models/Reading'
+import ReadingPlan from 'App/Models/ReadingPlan'
 import User from 'App/Models/User'
+import { DateTime } from 'luxon'
 
 Route.get('/', async () => {
   return { hello: 'world' }
@@ -97,4 +100,42 @@ Route.get('health', async ({ response }) => {
   return report.healthy
     ? response.ok(report)
     : response.badRequest(report)
+})
+
+Route.get('/user', async ({ auth }) => {
+  await auth.use('api').authenticate()
+  return auth.use('api').user!.toJSON()
+})
+
+Route.get('/user/plan', async ({ auth }) => {
+  await auth.use('api').authenticate()
+  const user = auth.use('api').user!
+  const plan = await ReadingPlan.query().where('user_id', user.id).preload('readings')
+
+  if (!plan)
+    return {'status': 'no plan found for user'}
+  return plan!.map((p) => p.serialize())
+})
+
+Route.get('/user/plan/assign', async ({ auth }) => {
+  await auth.use('api').authenticate()
+  const user = auth.use('api').user!
+
+  const queryPlan = await ReadingPlan.query().where('user_id', user.id)
+  if (queryPlan.length > 0)
+    return {'status': 'already assigned plan'}
+  const reading = new Reading()
+  reading.complete = false
+  reading.label = 'OT 1'
+  reading.verseStart = 'Genesis 1'
+  reading.verseEnd = 'Genesis 3'
+  reading.date = DateTime.fromJSDate(new Date(2020, 1, 1))
+  await reading.save()
+  const plan = new ReadingPlan()
+  plan.name = 'Test Plan'
+  await plan.related('readings').saveMany([reading])
+  await plan.save()
+  await user.related('readingPlan').save(plan)
+  await user.save()
+  return plan!.toJSON()
 })
