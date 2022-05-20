@@ -17,7 +17,7 @@ const Auth: React.FC = () => {
       /**
    * Construct URL for the callback route.
    */
-  const url = new URL('http://localhost:3333/google/callback')
+  const url = new URL('https://salty.yas.family/api/google/callback')
 
   /**
    * Add the query provided by google.
@@ -34,7 +34,7 @@ const Auth: React.FC = () => {
     },
     credentials: 'include'
   }).then(data => data.json()).then(resp => {
-    fetch('http://localhost:3333/authcheck', { 
+    fetch('https://salty.yas.family/api/authcheck', { 
       method: 'get', 
       headers: new Headers({
           'Authorization': 'Bearer ' + resp.token, 

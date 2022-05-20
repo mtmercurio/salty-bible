@@ -14,7 +14,7 @@ const Login: React.FC = () => {
   const [authUrl, setAuthUrl] = useState("");
 
   useEffect(() => {
-    fetch('http://localhost:3333/google/redirect').then(response => response.json())
+    fetch('https://salty.yas.family/api/google/redirect').then(response => response.json())
     .then(data => {
         setAuthUrl(data.redirectUrl);
     })
@@ -22,21 +22,27 @@ const Login: React.FC = () => {
 
   }, []);
 
-  const testClick = () => {
-    fetch('http://localhost:3333/authcheck', { 
-    method: 'get', 
-    headers: new Headers({
+  const getHeaders = () => {
+    let headers;
+    if (localStorage.getItem('salty_token')) {
+      headers = new Headers({
         'Authorization': 'Bearer ' + localStorage.getItem('salty_token')
-    })
+      })
+    }
+    return headers;
+  }
+
+  const testClick = () => {
+    fetch('https://salty.yas.family/api/authcheck', { 
+    method: 'get', 
+    headers: getHeaders()
 }).then((response) => response.json()).then(d=>console.log(d))
   }
 
   const logoutClick = () => {
-      fetch('http://localhost:3333/logout', {
+      fetch('https://salty.yas.family/api/logout', {
         method: 'post', 
-        headers: new Headers({
-            'Authorization': 'Bearer ' + localStorage.getItem('salty_token')
-        })
+        headers: getHeaders()
     }).then((response) => response.json()).then(d=>console.log(d))
   }
 
