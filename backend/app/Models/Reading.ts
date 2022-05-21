@@ -18,15 +18,11 @@ export default class Reading extends BaseModel {
   public label: string
 
   @column()
-  public verseStart: string
-
-  @column()
-  public verseEnd: string
+  public verses: string
 
   @column()
   public complete: boolean
 
   @column()
   public readingPlanId: number
-
 }

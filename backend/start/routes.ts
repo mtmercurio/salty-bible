@@ -24,12 +24,12 @@ import Database from '@ioc:Adonis/Lucid/Database'
 import Reading from 'App/Models/Reading'
 import ReadingPlan from 'App/Models/ReadingPlan'
 import User from 'App/Models/User'
+import PlanImporter from '../data/PlanImport'
 import { DateTime } from 'luxon'
 
 Route.get('/', async () => {
   return { hello: 'world' }
 })
-
 
 Route.get('/:provider/redirect', async ({ ally, auth, response, params }) => {
   if (await auth.check()) {
@@ -40,26 +40,25 @@ Route.get('/:provider/redirect', async ({ ally, auth, response, params }) => {
 })
 
 Route.get('/:provider/callback', async ({ ally, auth, response }) => {
-
   const googleAuth = ally.use('google')
 
   /**
    * Managing error states here
    */
-    
+
   /**
    * User has explicitly denied the login request.
    */
-     if (googleAuth.accessDenied()) {
-      return 'Access was denied'
-    }
-  
-    /**
-     * There was an unknown error during the redirect.
-     */
-    if (googleAuth.hasError()) {
-      return googleAuth.getError()
-    }
+  if (googleAuth.accessDenied()) {
+    return 'Access was denied'
+  }
+
+  /**
+   * There was an unknown error during the redirect.
+   */
+  if (googleAuth.hasError()) {
+    return googleAuth.getError()
+  }
 
   const googleUser = await googleAuth.user()
 
@@ -68,38 +67,37 @@ Route.get('/:provider/callback', async ({ ally, auth, response }) => {
    * a new one
    */
   if (googleUser.email) {
-    const user = await User.firstOrCreate({
-      email: googleUser.email,
-    }, {
-      name: googleUser.name,
-    })
-  
+    const user = await User.firstOrCreate(
+      {
+        email: googleUser.email,
+      },
+      {
+        name: googleUser.name,
+      }
+    )
+
     const oat = await auth.use('api').login(user)
 
     return response.ok(oat.toJSON())
   }
-  
-
 })
 
-Route.get('/authcheck', async ({ auth }) => { 
+Route.get('/authcheck', async ({ auth }) => {
   await auth.use('api').authenticate()
-  return {'isAuthenticated' : auth.use('api').isAuthenticated }
+  return { isAuthenticated: auth.use('api').isAuthenticated }
 })
 
 Route.post('/logout', async ({ auth }) => {
   await auth.use('api').revoke()
   return {
-    revoked: true
+    revoked: true,
   }
 })
 
 Route.get('health', async ({ response }) => {
   const report = await HealthCheck.getReport()
 
-  return report.healthy
-    ? response.ok(report)
-    : response.badRequest(report)
+  return report.healthy ? response.ok(report) : response.badRequest(report)
 })
 
 Route.get('/user', async ({ auth }) => {
@@ -112,30 +110,22 @@ Route.get('/user/plan', async ({ auth }) => {
   const user = auth.use('api').user!
   const plan = await ReadingPlan.query().where('user_id', user.id).preload('readings')
 
-  if (!plan)
-    return {'status': 'no plan found for user'}
+  if (!plan) return { status: 'no plan found for user' }
   return plan!.map((p) => p.serialize())
 })
 
 Route.get('/user/plan/assign', async ({ auth }) => {
   await auth.use('api').authenticate()
+
+  const importer = new PlanImporter()
   const user = auth.use('api').user!
 
   const queryPlan = await ReadingPlan.query().where('user_id', user.id)
-  if (queryPlan.length > 0)
-    return {'status': 'already assigned plan'}
-  const reading = new Reading()
-  reading.complete = false
-  reading.label = 'OT 1'
-  reading.verseStart = 'Genesis 1'
-  reading.verseEnd = 'Genesis 3'
-  reading.date = DateTime.fromJSDate(new Date(2020, 1, 1))
-  await reading.save()
-  const plan = new ReadingPlan()
-  plan.name = 'Test Plan'
-  await plan.related('readings').saveMany([reading])
-  await plan.save()
+  if (queryPlan.length > 0) return { status: 'already assigned plan' }
+
+  const plan = await importer.getReadingPlan()
+  console.log(plan)
   await user.related('readingPlan').save(plan)
   await user.save()
-  return plan!.toJSON()
+  return { status: 'plan assigned' }
 })

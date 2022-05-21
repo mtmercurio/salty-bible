@@ -3,7 +3,7 @@ import BaseSchema from '@ioc:Adonis/Lucid/Schema'
 export default class Readings extends BaseSchema {
   protected tableName = 'readings'
 
-  public async up () {
+  public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
 
@@ -14,19 +14,14 @@ export default class Readings extends BaseSchema {
       table.timestamp('updated_at', { useTz: true })
 
       table.date('date')
-      table.string('verse_start')
-      table.string('verse_end')
+      table.string('verses')
       table.string('label')
       table.boolean('complete').defaultTo(false)
-      table
-        .integer('reading_plan_id')
-        .unsigned()
-        .references('reading_plans.id')
-        .onDelete('CASCADE')
+      table.integer('reading_plan_id').unsigned().references('reading_plans.id').onDelete('CASCADE')
     })
   }
 
-  public async down () {
+  public async down() {
     this.schema.dropTable(this.tableName)
   }
 }
