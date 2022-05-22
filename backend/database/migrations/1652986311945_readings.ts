@@ -16,6 +16,7 @@ export default class Readings extends BaseSchema {
       table.date('date')
       table.string('verses')
       table.string('label')
+      table.integer('reading_day_index')
       table.boolean('complete').defaultTo(false)
       table.integer('reading_plan_id').unsigned().references('reading_plans.id').onDelete('CASCADE')
     })

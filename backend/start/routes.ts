@@ -129,3 +129,46 @@ Route.get('/user/plan/assign', async ({ auth }) => {
   await user.save()
   return { status: 'plan assigned' }
 })
+
+Route.get('/user/plan/status', async ({ auth }) => {
+  await auth.use('api').authenticate()
+  const user = auth.use('api').user!
+  const queryPlan = await ReadingPlan.query().where('user_id', user.id)
+  if (queryPlan.length == 0) return { status: 'no plan assigned' }
+
+  const readingPlan = await ReadingPlan.query().whereHas('readings', (query) => {
+    query.where('complete', true)
+  })
+  if (readingPlan.length == 0) return { status: 'not started' }
+  return { status: 'in progress' }
+})
+
+Route.get('/user/plan/today', async ({ auth }) => {
+  await auth.use('api').authenticate()
+  const user = auth.use('api').user!
+  const queryPlan = await ReadingPlan.query().where('user_id', user.id)
+  if (queryPlan.length == 0) return { status: 'no plan assigned' }
+
+  const labels = await Reading.query().where('reading_plan_id', queryPlan[0].id).distinct('label')
+  const today = labels!.map(async (label) => {
+    const labelValue = label.label
+    const reading = await Reading.query()
+      .where('reading_plan_id', queryPlan[0].id)
+      .where('complete', false)
+      .where('label', labelValue)
+      .orderBy('reading_day_index', 'asc')
+      .first()
+    return reading
+    // TODO handle all complete
+  })
+  const readings = await Promise.all(today)
+  return readings.map((r) => r?.serialize())
+})
+
+Route.post('/readings/:id/toggle-complete', async ({ auth, params }) => {
+  await auth.use('api').authenticate()
+  const queryReading = await Reading.findByOrFail('id', params.id)
+  queryReading.complete = !queryReading.complete
+  queryReading.save()
+  return queryReading
+})

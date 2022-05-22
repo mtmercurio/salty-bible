@@ -18,12 +18,14 @@ export default class PlanImporter {
           const date = new Date(Date.parse(row.date))
           const label = row.label
           const verses = row.verses
+          const readingDayIndex = row.reading_day_index
 
           const reading = new Reading()
           reading.complete = false
           reading.label = label
           reading.verses = verses
           reading.date = DateTime.fromJSDate(date)
+          reading.readingDayIndex = readingDayIndex
           await reading.save()
           readings.push(reading)
         })

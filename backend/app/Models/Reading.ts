@@ -25,4 +25,7 @@ export default class Reading extends BaseModel {
 
   @column()
   public readingPlanId: number
+
+  @column()
+  public readingDayIndex: number
 }
